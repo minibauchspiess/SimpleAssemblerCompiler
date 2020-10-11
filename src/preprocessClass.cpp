@@ -8,22 +8,26 @@ preprocessClass::preprocessClass(string inFileName){
 
     //Abre os arquivos de leitura e de saida (preprocessado)
     inputFile.open(inFileName);
-    ppFile.open(rawInFileName+".pre");
-    
-    //Inicializa a flagInit como 1 (objeto acaba de ser criado, nenhuma passagem por linha foi feita)
-    flagInit = true;
-
-
+    ppFileName = (rawInFileName+".pre");
+    ppFile.open(ppFileName);
 }
 
 preprocessClass::~preprocessClass(){
+    //Libera a memoria alocada pelos vetores (corrige problema de "double free or corruption (fasttop)")
+    
+    //mdt.clear();
+    //mnt.clear();
+    //equ.clear();
+    //ppFileName.clear();
+    //delete this;
+
     //Fecha os arquivos
     inputFile.close();
     ppFile.close();
 }
 
 
-void preprocessClass::Run(){
+string preprocessClass::Run(){
 
     string line;
 
@@ -36,165 +40,272 @@ void preprocessClass::Run(){
     //Identifica se ha uma diretiva pelos tokens e a executa, se houver
 
     //Realiza o preprocessamento enquanto o arquivo nao chega ao fim
+
+    //Insere a primeira linha sem acrescentar \n primeiro
+    line = StandardLine();
+    line = ExeDirective(line);
+    if(line != ""){
+        ppFile<<(line);
+    }
+
+    //Insere as demais linhas, sempre colocando primeiro uma quebra de linha
     while (!inputFile.eof()){
-        //Busca uma linha normalizada de codigo
+        //Busca uma linha padronizada de codigo
         line = StandardLine();
 
+        //Executa qualquer diretiva que haja na linha, e recupera as linhas que devem ir no .pre
+        line = ExeDirective(line);
 
-
-
+        //Insere a quebra de linha e a proxima linha, caso a linha obtida nao esteja vazia
+        if(line != ""){
+            ppFile<<("\n"+line);
+        }
     }
     
-   
+    //Retorna o nome do arquivo criado
+    return ppFileName;
 
 }
 
-//Funcoes de normalizacao
+//Funcao de padronizacao da linha
 string preprocessClass::StandardLine(){
-string stdLine, line;
+    string stdLine, line;
 
-//Pega a proxima linha para padronizar
-getline(inputFile, line);
-
-//Apaga o comentario que houver, para analisar a linha sem comentario
-line = EraseComment(line);
-
-//Caso seja uma linha vazia, a desconsidera e busca a seguinte
-while(EmptyLine(line)){
+    //Pega a proxima linha para padronizar
     getline(inputFile, line);
-    line = EraseComment(line);
-}
 
-stdLine = line;
+    //Apaga o comentario que houver, para analisar a linha sem comentario
+    line = lineOperations::EraseComment(line);
 
-//Caso haja um label dividido em mais de uma linha, mistura mais de uma linha na linha final
-if(LabelSplited(line)){
-    //Busca nas proximas linhas ate encontrar uma nao vazia
-    do{
+    //Caso seja uma linha vazia, a desconsidera e busca a seguinte
+    while(lineOperations::EmptyLine(line)){
         getline(inputFile, line);
-        line = EraseComment(line);
-    }while(EmptyLine(line));
-    stdLine.append(" "+line);
-}
-
-//Remove todos os espacos desnecessarios da linha criada
-stdLine = SingleSpaced(stdLine);
-
-//Torna todas as letras maiusculas
-stdLine = MakeUpper(stdLine);
-
-return stdLine;
-}
-
-string preprocessClass::EraseComment(string line){
-//Busca a posicao de ';' na string
-size_t comentPos = line.find_first_of(';');
-
-//Caso tenha encontrado, apaga tudo que esta escrito apos o ';'
-if(comentPos != string::npos){
-    line.erase(comentPos);
-}
-
-//Retorna a linha reduzida
-return line;
-}
-
-bool preprocessClass::EmptyLine(string line){
-//Percorre a string procurando algum char diferente de ' '
-size_t pos = line.find_first_not_of(' ');
-
-//Caso nao tenha encontrado, retorna que a linha esta vazia (true)
-if(pos == string::npos){
-    return true;
-}
-//Caso contrario, a linha nao esta vazia
-else{
-    return false;
-}
-}
-
-bool preprocessClass::LabelSplited(string line){
-//Detecta a presenca de um label (indicado pela presenca de ':')
-size_t labelPos = line.find_first_of(':');
-
-//Caso nao tenha achado nenhuma label, a linha ja nao estara dividida
-if(labelPos == string::npos){
-    return false;
-}
-
-//Caso tenha encontrado uma label, verifica se ha algo escrito apos ela
-size_t comPos = line.find_first_not_of(' ', labelPos+1);
-
-//Caso haja um comando depois da label, a linha nao esta dividida
-if(comPos != string::npos){
-    return false;
-}
-//Caso contrario, o resto do comando esta em linhas posteriores
-else{
-    return true;
-}
-}
-
-string preprocessClass::SingleSpaced(string line){
-//Char que percorre a string comparando cada elemento seu
-char c, lastC = 'a';
-
-//Indice que percorre a string
-size_t pos = line.find_first_not_of(' ');
-
-//String compactada, de saida
-string outString;
-
-//Percorre a string enquanto ainda houverem elementos em seu interior a serem analisados
-while ((pos <= line.length()) && (pos != string::npos)){
-    c = line[pos];  //Busca novo valor a ser analizado
-
-    //Dependendo do char lido, o padrao de tirar linhas podera ser diferente
-    if((c == ':') || (c == ',')){   //Sem espacos antes, com espaco depois, pula para o proximo item
-        outString.push_back(c);
-        outString.push_back(' ');
-
-        lastC = c;
-        pos = line.find_first_not_of(' ', pos+1);
-    }
-    else if(c == ' '){  //Nao insere, pula para o proximo valor que nao e espaco
-        lastC = c;
-        pos = line.find_first_not_of(' ', pos+1);
-    }
-    else if(lastC == ' '){  //Se for uma letra ou _ e anteriormente tiver tido um ' ', insere o espaco e a letra, e segue adiante
-        outString.push_back(' ');
-        outString.push_back(c);
-
-        lastC = c;
-        pos++;
-    }
-    else{   //Se for uma letra, e o ultimo valor lido nao for um espaco, apenas insere o espaco
-        outString.push_back(c);
-
-        lastC = c;
-        pos++;
+        line = lineOperations::EraseComment(line);
     }
 
-}
+    stdLine = line;
 
-//Retorna a string montada
-return outString;
-
-}
-
-string preprocessClass::MakeUpper(string line){
-    locale loc;
-    for(uint i=0; i<line.length(); i++){
-        line[i] = toupper(line[i], loc);
+    //Caso haja um label dividido em mais de uma linha, mistura mais de uma linha na linha final
+    if(lineOperations::LabelSplited(line)){
+        //Busca nas proximas linhas ate encontrar uma nao vazia
+        do{
+            getline(inputFile, line);
+            line = lineOperations::EraseComment(line);
+        }while(lineOperations::EmptyLine(line));
+        stdLine.append(" "+line);
     }
-    return line;
+
+    //Remove todos os espacos desnecessarios da linha criada
+    stdLine = lineOperations::SingleSpaced(stdLine);
+
+
+    //Torna todas as letras maiusculas
+    stdLine = lineOperations::MakeUpper(stdLine);
+
+    return stdLine;
 }
-
-
 
 //Funcoes de execucao de diretivas
-void preprocessClass::ExeDirective(string line){
-    
+string preprocessClass::ExeDirective(string line){
+    //Comeca alterando os valores definidos (EQU)
+    line = ReplaceEqu(line);
+
+    //Confere se tem alguma diretiva a ser executada na linha
+    vector<string> tokens = lineOperations::GetTokens(line);
+    string directive = GetDirective(tokens);
+
+    //Caso sejam as diretivas EQU ou MACRO, salva os novos valores na tabela, e envia uma linha vazia (nao entra no arquivo preprocessado)
+    if(directive == "EQU"){
+        SaveEqu(tokens);
+        return "";
+    }
+    else if(directive == "MACRO"){
+        SaveMacro(tokens);
+        return "";
+    }
+    //Caso seja a diretiva IF, le a linha seguinte, e retorna "" caso seja falso, e trata a linha caso seja verdadeira
+    else if(directive == "IF"){
+
+        line = StandardLine();
+        if(DirIf(tokens)){
+            //Substitui qualquer ocorrencia de EQU e expande qualquer MACRO, caso haja. Assume-se que nao sera outra diretiva
+            line = ReplaceEqu(line);
+            line = ExpandMacro(line);
+
+            //Se a linha seguinte for uma diretiva EQU, executar a diretiva e retornar uma linha vazia
+            if(GetDirective(lineOperations::GetTokens(line)) == "EQU"){
+                SaveEqu(lineOperations::GetTokens(line));
+                return "";
+            }
+            return line;
+        }
+        else{
+            return "";
+        }
+    }
+    //Caso nao seja nenhuma das diretivas listadas, subsitui as definicoes EQU na linha e expande se for macro
+    else{
+        line = ReplaceEqu(line);
+        line = ExpandMacro(line);
+
+        return line;
+    }
+
+
 }
+
+string preprocessClass::GetDirective(vector<string> tokens){
+    string token;
+
+    if(lineOperations::IsLabel(tokens[0])){ //Caso o primeiro token seja uma label, a possivel diretiva estara no segundo token
+        token = tokens[1];
+    }
+    else{
+        token = tokens[0];
+    }
+    
+    //Confere se o token eh uma das diretivas a serem preprocessadas
+    if((token == "EQU") || (token == "IF") || (token == "MACRO")){
+        return token;  //Se for, retorna a diretiva
+    }
+
+    return "";  //Caso contrario, retorna uma string vazia
+
+}
+
+void preprocessClass::SaveEqu(vector<string> tokens){
+    tokens[0].pop_back();   //Elimina o ':' antes de enviar pra tabela
+    equ.insert({tokens[0] ,tokens[2]});  //Insere os novos valores na tabela
+}
+
+bool preprocessClass::DirIf(vector<string> tokens){
+    //Confere em que posicao esta a diretiva IF
+    if(tokens[0] == "IF"){
+        if(tokens[1] != "0"){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+    else{
+        if(tokens[2] != "0"){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+}
+
+void preprocessClass::SaveMacro(vector<string> tokens){
+    //Busca os parametros para serem passados pra MNT
+    uint nArg, pos;     //Numero de argumentos passados para a macro, e posicao dela na MDT
+
+    nArg = tokens.size() - 2;
+    pos = mdt.size();   //Ultima posicao + 1, posicao onde a instrucao sera inserida
+
+    tokens[0].pop_back(); //O primeiro token eh o label, e este permanece com ':' ao final. A label deve ser salva sem ':'
+
+    //Insere o nome da macro (chave), junto com o par de numero de argumentos com posicao do corpo da macro
+    mnt.insert({tokens[0], pair<uint,uint>(nArg,pos)});
+
+
+    //Permanece lendo linhas, ate encontrar a linha em que esta escrito "ENDMACRO", e armazena todas em uma unica string, a ser salva em mdt
+    string macroBody, curLine;
+    vector<string> newTokens;
+    curLine = StandardLine();
+
+    while(curLine != "ENDMACRO"){
+        //Recupera os tokens sinalizados na linha
+        newTokens = lineOperations::GetTokens(curLine);
+
+        //Substitui os parametros extras por #numerodotoken
+        for(uint i=2; i<tokens.size(); i++){
+            newTokens = lineOperations::ReplaceToken(newTokens, tokens[i], "#"+to_string(i-1));
+        }
+        //Recupera a string, com os parametros atualizados
+        curLine = lineOperations::RebuildLine(newTokens);
+
+        //Insere a linha na linha de saida, junto com a quebra de linha, e busca a proxima
+        macroBody.append(curLine);
+        macroBody.push_back('\n');
+
+        curLine = StandardLine();
+    }
+    //Retira a quebra de linha da ultima linha da macro (funcoes externas que devem decidir se havera ou nao a quebra de linha)
+    macroBody.pop_back();
+
+    //Insere o corpo da macro na Macro Definition Table
+    mdt.push_back(macroBody);
+
+}
+
+string preprocessClass::ReplaceEqu(string line){
+    //Recupera os tokens, para realizar a troca das definicoes
+    vector<string> tokens = lineOperations::GetTokens(line);
+
+    //Identifica a ocorrencia de um valor definido em equ
+    map<string,string>::iterator it;
+    for(uint i=0; i<tokens.size(); i++){
+        it = equ.find(tokens[i]);
+        if(it != equ.end()){    //Caso tenha encontrado a definicao, altera o valor na lista de tokens
+            tokens = lineOperations::ReplaceToken(tokens, tokens[i], it->second);       //Na lista de token, todos os tokens iguais ao da posicao i se transformarao no valor mapeado em equ
+        }
+    }
+
+    //Transforma novamente em uma string, e a retorna
+    return lineOperations::RebuildLine(tokens);
+}
+
+string preprocessClass::ExpandMacro(string line){
+    //Recupera os tokens, para facilitar a comparacao e substituicao de tokens
+    vector<string> tokens = lineOperations::GetTokens(line);
+
+    //Confere se a macro existe na tabela de macros definida
+    map<string,pair<uint,uint>>::iterator it;
+    it = mnt.find(tokens[0]);
+
+    //Se nao existir, retorna a linha inalterada
+    if(it == mnt.end()){
+        return line;
+    }
+    //Se existir, recupera o corpo da macro
+    string body = mdt[it->second.second];
+
+    //Se houverem parametros a serem substituidos, separa as linhas do corpo da macro, para a substituicao
+    if(it->second.first>0){
+        //Divide o corpo da macro em linhas
+        vector<string> lines = lineOperations::GetLines(body);
+
+        //Vetor para receber os tokens da nova linha
+        vector<string> lineTokens;
+
+        //Para cada linha, substitui os parametros passados no corpo
+        for(uint i=0; i<lines.size(); i++){
+            //Separa a linha em tokens, para facilitar a substituicao
+            lineTokens = lineOperations::GetTokens(lines[i]);
+
+            //Tenta fazer a substituicao para cada argumento possivel
+            for(uint paramInd=1; paramInd<=it->second.first; paramInd++){
+                lineTokens = lineOperations::ReplaceToken(lineTokens, ("#"+to_string(paramInd)), tokens[paramInd]);
+            }
+
+            //Atualiza a linha com seus parametros inseridos
+            lines[i] = lineOperations::RebuildLine(lineTokens);
+        }
+
+        //Insere todas as linhas em uma unica string, com \n
+        body = lines[0];
+        for(uint i=1; i<lines.size(); i++){
+            body.push_back('\n');
+            body.append(lines[i]);
+        }
+    }
+
+    return body;
+
+}
+
 
 

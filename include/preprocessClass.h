@@ -1,17 +1,20 @@
 #pragma once
 
+
 #include <fstream>  //Bib para leitura e escrita de arquivos
 #include <string.h>
 #include <iostream>
 #include <locale>
 #include <map>
+#include <vector>
 
 #include <unistd.h>
 
+#include "lineOperations.h"
+
 
 using namespace std;
-#define CLINE_SIZE 160 //Maior qtd de chars em uma linha oficial (variaveis e rotulos de 50, comando copy)
-
+//using namespace lineOperations::;
 
 
 /*
@@ -41,11 +44,13 @@ private:
     //Arquivos manipulados
     ifstream inputFile;  //Arquivo original assembly, .asm
     ofstream ppFile;     //Arquivo preprocessado, .pre
+    string ppFileName;
 
-    
+    //Tabelas
+    map<string,string> equ;   //Valores salvos pelo comando EQU
+    map<string, pair<uint,uint> > mnt;  //Macro Name Table, contendo a label, qtd de argumentos e local na mdf com seu corpo
+    vector<string> mdt; //Macro Definition Table, contendo em cada posicao o corpo de uma macro
 
-    //Flag de inicializacao do objeto. '\n' deve ser inserido apenas a partir da 2 linha
-    bool flagInit;
 
 public:
 
@@ -53,22 +58,23 @@ public:
     preprocessClass(string inFileName);
     ~preprocessClass();
 
-    //Principal funcao. Percorre o arquivo inteiro, fazendo as adaptacoes necessarias
-    void Run();
+    //Principal funcao. Percorre o arquivo inteiro, fazendo as adaptacoes necessarias. Retorna o nome do arquivo .pre
+    string Run();
 
     //Recebe uma linha do codigo, e retorna uma linha na forma padronizada
     string StandardLine();
+    
+    //Executa a diretiva, se houver uma na linha. Retorna a linha a ser inserida no arquivo preprocessado
+    string ExeDirective(string line);   //Caso seja uma diretia de mais linhas, ela busca mais linhas do arquivo 
 
-    //Funcoes auxiliares de StandardLine
-    string EraseComment(string line);   //Retorna a linha excluindo tudo escrito apos a ocorrencia de ';' (comentario)
-    bool EmptyLine(string line);    //Indica se a linha esta vazia, ou contem apenas espacos
-    bool LabelSplited(string line); //Indica se a linha possui apenas um label, com o comando inserido em outra linha
-    string SingleSpaced(string line);   //Retira todos os espacos excessivos da linha
-    string MakeUpper(string line);  //Converte todos os caracteres da linha para upper case
+    //Funcoes auxiliares de ExeDirective
+    string GetDirective(vector<string> tokens);   //Busca a diretiva na lista de tokens (caso haja uma)
+    void SaveEqu(vector<string> tokens);   //Executa a diretiva EQU
+    bool DirIf(vector<string> tokens);    //Retorna true se a diretiva IF for verdadeira
+    void SaveMacro(vector<string> tokens); //Salva a macro nas tabelas. Le linhas adicionais ate encontrar ENDMACRO
+    string ReplaceEqu(string line);   //Se houver valores de EQU na linha, os altera para os valores reais. Nao faz nada, caso contrario
+    string ExpandMacro(string line);  //Se houver uma macro na linha, retorna uma string com seu corpo, e seus parametros trocados pelos indicados. Caso nao haja, nao faz nada com a linha
 
-
-    //Executa a diretiva, se houver uma na linha. Essa funcao que insere as linhas no arquivo preprocessado
-    void ExeDirective(string line);
 
 
 };
