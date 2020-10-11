@@ -12,41 +12,27 @@ preprocessClass::preprocessClass(string inFileName){
     ppFile.open(ppFileName);
 }
 
-preprocessClass::~preprocessClass(){
-    //Libera a memoria alocada pelos vetores (corrige problema de "double free or corruption (fasttop)")
-    
-    //mdt.clear();
-    //mnt.clear();
-    //equ.clear();
-    //ppFileName.clear();
-    //delete this;
-
-    //Fecha os arquivos
-    inputFile.close();
-    ppFile.close();
-}
+preprocessClass::~preprocessClass(){}
 
 
 string preprocessClass::Run(){
 
+    cout<<"Inicializando preprocessamento..."<<endl;
+
     string line;
-
-    //Pega linha
-
-    //Normaliza a linha (o normalizador pega mais linhas, se preciso)
-
-    //Separa os tokens
-
-    //Identifica se ha uma diretiva pelos tokens e a executa, se houver
-
-    //Realiza o preprocessamento enquanto o arquivo nao chega ao fim
 
     //Insere a primeira linha sem acrescentar \n primeiro
     line = StandardLine();
     line = ExeDirective(line);
-    if(line != ""){
-        ppFile<<(line);
+    while(line == ""){  //Enquanto nao encontra uma linha nao vazia para inserir no arquivo final sem '\n', permanece lendo  
+        line = StandardLine();
+        line = ExeDirective(line);
+        //Se tiver chegado ao final do arquivo sem ler nenhuma linha valida, retorna com o arquivo .pre vazio
+        if(inputFile.eof()){
+            return ppFileName;
+        }
     }
+    ppFile<<(line);
 
     //Insere as demais linhas, sempre colocando primeiro uma quebra de linha
     while (!inputFile.eof()){
@@ -61,6 +47,17 @@ string preprocessClass::Run(){
             ppFile<<("\n"+line);
         }
     }
+    
+
+    //Fecha os arquivos
+    if(inputFile.is_open()){
+        inputFile.close();
+    }
+    if(ppFile.is_open()){
+        ppFile.close();
+    }
+    
+    cout<<"Preprocessamento finalizado"<<endl;
     
     //Retorna o nome do arquivo criado
     return ppFileName;
@@ -79,6 +76,10 @@ string preprocessClass::StandardLine(){
 
     //Caso seja uma linha vazia, a desconsidera e busca a seguinte
     while(lineOperations::EmptyLine(line)){
+        //Se tiver chegado ao fim do arquivo (linhas vazias ao final do mesmo), retorna com uma linha vazia
+        if(inputFile.eof()){
+            return "";
+        }
         getline(inputFile, line);
         line = lineOperations::EraseComment(line);
     }
@@ -107,6 +108,9 @@ string preprocessClass::StandardLine(){
 
 //Funcoes de execucao de diretivas
 string preprocessClass::ExeDirective(string line){
+    //Se for uma linha vazia (linhas ao final do codigo, StandardLine nao montou uma linha valida, e sim uma vazia)
+    if(line == "") return "";
+
     //Comeca alterando os valores definidos (EQU)
     line = ReplaceEqu(line);
 
@@ -179,7 +183,8 @@ void preprocessClass::SaveEqu(vector<string> tokens){
 }
 
 bool preprocessClass::DirIf(vector<string> tokens){
-    //Confere em que posicao esta a diretiva IF
+    //A diretiva IF sera o segundo token da linha caso haja uma label, e o primeiro caso contrario. O parametro de comparacao sera logo em seguida
+    //Qualquer valor diferente de "0" equivale a uma comparacao true
     if(tokens[0] == "IF"){
         if(tokens[1] != "0"){
             return true;
@@ -220,7 +225,7 @@ void preprocessClass::SaveMacro(vector<string> tokens){
         //Recupera os tokens sinalizados na linha
         newTokens = lineOperations::GetTokens(curLine);
 
-        //Substitui os parametros extras por #numerodotoken
+        //Substitui os parametros extras por #numerodoparametro
         for(uint i=2; i<tokens.size(); i++){
             newTokens = lineOperations::ReplaceToken(newTokens, tokens[i], "#"+to_string(i-1));
         }
@@ -306,6 +311,4 @@ string preprocessClass::ExpandMacro(string line){
     return body;
 
 }
-
-
 

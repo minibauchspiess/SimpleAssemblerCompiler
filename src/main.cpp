@@ -8,11 +8,10 @@
 #include <vector>
 
 #include "preprocessClass.h"
+#include "mountClass.h"
 
 using namespace std;
 
-
-#define POS 13
 
 int main(int argc, char* argv[]){
 
@@ -26,31 +25,25 @@ int main(int argc, char* argv[]){
         if(argv[1] == ppCommand){
             preprocessClass ppObj(fileName);
             ppObj.Run();
-            ppObj.~preprocessClass();
         }
         //Caso seja -o, apenas montagem, filename eh um .pre
         else if(argv[1] == mComannd){
-            //mounterClass mountObj(fileName);
-            cout<<"Falta montar"<<endl;
+            mountClass mountObj(fileName);
+            mountObj.Run();
         }
     }
-    //Caso nao haja uma diretiva de compilacao, preprocessa e compila
+    //Caso nao haja uma diretiva de compilacao, preprocessa e monta
     else{
         string fileName(argv[1]), ppFileName;
 
         //Preprocessa
         preprocessClass ppObj(fileName);
         ppFileName = ppObj.Run();
-        ppObj.~preprocessClass();
 
         //Monta
-        //mounterClass mountObj(fileName);
-        cout<<"Montando com arquivo "<<ppFileName<<endl;
-        
+        mountClass mountObj(ppFileName);
+        mountObj.Run();
     }
-    /*string fileName(argv[2]);
-    preprocessClass ppObj(fileName);
-    string aux = ppObj.Run();
-    ppObj.~preprocessClass();*/
+
     return 1;
 }

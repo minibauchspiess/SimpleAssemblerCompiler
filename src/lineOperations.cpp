@@ -68,36 +68,33 @@ string lineOperations::SingleSpaced(string line){
     while ((pos < line.length()) && (pos != string::npos)){
         c = line[pos];  //Busca novo valor a ser analizado
 
-        //Dependendo do char lido, o padrao de tirar linhas podera ser diferente
-        if((c == ':') || (c == ',')){   //Sem espacos antes, com espaco depois, pula para o proximo item
+        //Dependendo do char lido, o padrao de tirar linhas podera ser diferente. Todos os espacos da string sao desconsiderados, e sao adicionados novos onde necesario
+        if((c == ':') || (c == ',')){   //Padrao: sem espacos antes, com espaco depois. Depois pula para o proximo item
             outString.push_back(c);
             outString.push_back(' ');
 
             lastC = c;
             pos = line.find_first_not_of(' ', pos+1);
         }
-        else if(c == ' '){  //Nao insere, pula para o proximo valor que nao e espaco
+        else if(c == ' '){  //Padrao: Ignora. Depois pula para o proximo valor que nao e espaco
             lastC = c;
             pos = line.find_first_not_of(' ', pos+1);
         }
-        else if(lastC == ' '){  //Se for uma letra ou _ e anteriormente tiver tido um ' ', insere o espaco e a letra, e segue adiante
+        else if(lastC == ' '){  //Eh uma letra ou '_' e o char anterior foi ' ' (indica comeco da nova palavra). Padrao: insere o espaco e a letra. Depois segue adiante
             outString.push_back(' ');
             outString.push_back(c);
 
             lastC = c;
             pos++;
         }
-        else{   //Se for uma letra, e o ultimo valor lido nao for um espaco, apenas insere o espaco
+        else{   //Eh uma letra ou '_', e o char anterior tambem o foi (indica meio da palavra). Padrao: apenas insere o char
             outString.push_back(c);
 
             lastC = c;
             pos++;
         }
     }
-
-    //Essa funcao parece estar adicionando um char "invisivel" ao final, e sem tempo de consertar, entao so retirar o ultimo elemento
-    //outString.pop_back();
-
+    
     //Retorna a string montada
     return outString;
 
@@ -181,7 +178,7 @@ vector<string> lineOperations::ReplaceToken(vector<string> tokens, string oldTok
     return tokens;
 }
 
-string lineOperations::RebuildLine(vector<string> tokens){
+string lineOperations::RebuildLine(vector<string> tokens, bool useComma){
     uint labelAdd=0;
     if(IsLabel(tokens[0])) labelAdd = 1;    //Usado na logica para inserir as virgulas
 
@@ -189,7 +186,7 @@ string lineOperations::RebuildLine(vector<string> tokens){
 
     for(uint i=1; i<tokens.size(); i++){
         //Se nao for o ultimo valor (continua no for), mas esta numa posicao onde deveria haver ',', insere a ','
-        if(i >= 2+labelAdd){
+        if((i >= 2+labelAdd) && useComma){
             outString.push_back(',');
         }
         //Insere espaco e o proximo token

@@ -2,19 +2,12 @@
 
 
 #include <fstream>  //Bib para leitura e escrita de arquivos
-#include <string.h>
-#include <iostream>
-#include <locale>
 #include <map>
-#include <vector>
-
-#include <unistd.h>
 
 #include "lineOperations.h"
 
 
 using namespace std;
-//using namespace lineOperations::;
 
 
 /*
@@ -54,11 +47,10 @@ private:
 
 public:
 
-    //Inicializador e destrutor. Abrem e fecham arquivos, setam flags
     preprocessClass(string inFileName);
     ~preprocessClass();
 
-    //Principal funcao. Percorre o arquivo inteiro, fazendo as adaptacoes necessarias. Retorna o nome do arquivo .pre
+    //Principal funcao. Percorre o arquivo inteiro, fazendo as adaptacoes necessarias. Monta o arquivo .pre e retorna seu nome. Fecha os arquivos ao final
     string Run();
 
     //Recebe uma linha do codigo, e retorna uma linha na forma padronizada
@@ -74,8 +66,6 @@ public:
     void SaveMacro(vector<string> tokens); //Salva a macro nas tabelas. Le linhas adicionais ate encontrar ENDMACRO
     string ReplaceEqu(string line);   //Se houver valores de EQU na linha, os altera para os valores reais. Nao faz nada, caso contrario
     string ExpandMacro(string line);  //Se houver uma macro na linha, retorna uma string com seu corpo, e seus parametros trocados pelos indicados. Caso nao haja, nao faz nada com a linha
-
-
 
 };
 

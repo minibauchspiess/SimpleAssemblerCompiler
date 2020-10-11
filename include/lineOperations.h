@@ -8,9 +8,8 @@ using namespace std;
 
 /*** Classe com funcoes auxiliares de manipulacao de linhas adquiridas de codigo ***
  * 
- * - Possui operacoes de padronizacao de linhas (tirar espacos e \n excessivos, tornar uppercase, identificar label e linha vazia...)
+ * - Possui operacoes de padronizacao de linhas (tirar espacos e '\n' excessivos, tornar uppercase, identificar label e linha vazia...)
  * - Possui operacoes de manipulacao de tokens
- *
 */
 
 class lineOperations
@@ -32,6 +31,6 @@ public:
     //Operacoes de tokens
     static vector<string> GetTokens(string line);  //Divide uma linha em strings, cada uma representando um token da linha
     static vector<string> ReplaceToken(vector<string> tokens, string oldToken, string newToken);   //Substitui um token por outro no vetor
-    static string RebuildLine(vector<string> tokens);  //Reconstroi uma linha, utilizando os tokens passados
+    static string RebuildLine(vector<string> tokens, bool useComma = true);  //Reconstroi uma linha, utilizando os tokens passados
     static bool IsLabel(string token);
 };
